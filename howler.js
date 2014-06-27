@@ -382,40 +382,38 @@
 
         self._audioNode.push(newNode);
 
-        // setup the new audio node
-        newNode.src = url;
-        newNode._offset = 0;
-        newNode.preload = 'auto';
-        newNode.volume = (Howler._muted) ? 0 : self._volume * Howler.volume();
+        loadAsBlob(url, function (newUrl) {// setup the new audio node
+          newNode.src = newUrl;
+          newNode._offset = 0;
+          newNode.preload = 'auto';
+          newNode.volume = (Howler._muted) ? 0 : self._volume * Howler.volume();
 
-        // add this sound to the cache
-        cache[url] = self;
+          // setup the event listener to start playing the sound
+          // as soon as it has buffered enough
+          var listener = function() {
+            // round up the duration when using HTML5 Audio to account for the lower precision
+            self._duration = Math.ceil(newNode.duration * 10) / 10;
 
-        // setup the event listener to start playing the sound
-        // as soon as it has buffered enough
-        var listener = function() {
-          // round up the duration when using HTML5 Audio to account for the lower precision
-          self._duration = Math.ceil(newNode.duration * 10) / 10;
+            // setup a sprite if none is defined
+            if (Object.getOwnPropertyNames(self._sprite).length === 0) {
+              self._sprite = {_default: [0, self._duration * 1000]};
+            }
 
-          // setup a sprite if none is defined
-          if (Object.getOwnPropertyNames(self._sprite).length === 0) {
-            self._sprite = {_default: [0, self._duration * 1000]};
-          }
+            if (!self._loaded) {
+              self._loaded = true;
+              self.on('load');
+            }
 
-          if (!self._loaded) {
-            self._loaded = true;
-            self.on('load');
-          }
+            if (self._autoplay) {
+              self.play();
+            }
 
-          if (self._autoplay) {
-            self.play();
-          }
-
-          // clear the event listener
-          newNode.removeEventListener('canplaythrough', listener, false);
-        };
-        newNode.addEventListener('canplaythrough', listener, false);
-        newNode.load();
+            // clear the event listener
+            newNode.removeEventListener('canplaythrough', listener, false);
+          };
+          newNode.addEventListener('canplaythrough', listener, false);
+          newNode.load();
+        });
       }
 
       return self;
@@ -1422,8 +1420,6 @@
         Howler._howls.splice(index, 1);
       }
 
-      // delete this sound from the cache
-      delete cache[self._src];
       self = null;
     }
 
@@ -1537,6 +1533,33 @@
 
   }
 
+  var loadAsBlob = function(url, callback) {
+    // check if the buffer has already been cached
+    if (url in cache) {
+      return callback(cache[url].src);
+    } else {
+      // load the buffer from the URL
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.responseType = 'blob';
+      xhr.onload = function() {
+        // store the file in the page
+        var blob = xhr.response;
+        var newUrl = (window.URL || window.webkitURL).createObjectURL(blob);
+        cache[url] = {file: blob, src: newUrl};
+        return callback(newUrl);
+      };
+      xhr.onerror = function() {
+        // if there is an error, throw
+        throw ("error");
+      };
+      try {
+        xhr.send();
+      } catch (e) {
+        xhr.onerror();
+      }
+    }
+  };
   /**
    * Add support for AMD (Asynchronous Module Definition) libraries such as require.js.
    */
