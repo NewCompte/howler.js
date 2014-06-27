@@ -147,7 +147,9 @@
     position: function(x, y, z) {
 
       if (x >= 0 || x < 0) {
-        listenerPosition = [x, y, z];
+        listenerPosition[0] = x;
+        listenerPosition[1] = y;
+        listenerPosition[2] = z;
         if (usingWebAudio) {
           ctx.listener.setPosition(x, y, z);
         }
