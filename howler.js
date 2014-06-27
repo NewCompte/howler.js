@@ -279,6 +279,7 @@
     self._refDistance = o.refDistance || 1;
     self._maxDistance = o.maxDistance || 10000;
     self._rolloffFactor = o.rolloffFactor || 1;
+    self._distanceModel = o.distanceModel || "inverse";
     self._volume = o.volume !== undefined ? o.volume : 1;
     self._urls = o.urls || [];
     self._rate = o.rate || 1;
@@ -1017,6 +1018,41 @@
     },
 
     /**
+     * Get/set the distanceModel of the audio source.
+     * NOTE: This only works with Web Audio API, HTML5 Audio playback
+     * will not be affected.
+     * @param  {Float}  distanceModel  The maximum distance of the playback
+     * @param  {String} id (optional) The play instance ID.
+     * @return {Float}   Returns self or the current maximum distance
+     */
+    distanceModel: function(distanceModel, id) {
+      var self = this;
+
+      // if the sound hasn't been loaded, add it to the event queue
+      if (!self._loaded) {
+        self.on('play', function() {
+          self.distanceModel(distanceModel, id);
+        });
+
+        return self;
+      }
+
+      if (distanceModel >= 0 || distanceModel < 0) {
+        if (self._webAudio) {
+          var activeNode = (id) ? self._nodeById(id) : self._activeNode();
+          if (activeNode && activeNode.panner) {
+            self._distanceModel = distanceModel;
+            activeNode.panner.distanceModel = distanceModel;
+          }
+        }
+      } else {
+        return self._distanceModel;
+      }
+
+      return self;
+    },
+
+    /**
      * Get/set the rolloff factor of the audio source.
      * NOTE: This only works with Web Audio API, HTML5 Audio playback
      * will not be affected.
@@ -1294,6 +1330,7 @@
         node[index].panner.setVelocity(self._velocity[0], self._velocity[1], self._velocity[2]);
         node[index].panner.refDistance = self._refDistance;
         node[index].panner.maxDistance = self._maxDistance;
+        node[index].panner.distanceModel = self._distanceModel;
         node[index].panner.rolloffFactor = self._rolloffFactor;
         node[index].panner.connect(node[index]);
       }
