@@ -15,7 +15,8 @@
   // setup the audio context
   var ctx = null,
     usingWebAudio = true,
-    noAudio = false;
+    noAudio = false,
+    listenerPosition = [0, 0, 0];
   try {
     if (typeof AudioContext !== 'undefined') {
       ctx = new AudioContext();
@@ -146,9 +147,13 @@
     position: function(x, y, z) {
 
       if (x >= 0 || x < 0) {
+        listenerPosition = [x, y, z];
         if (usingWebAudio) {
           ctx.listener.setPosition(x, y, z);
         }
+      }
+      else {
+         return listenerPosition;
       }
 
       return Howler;
@@ -884,6 +889,17 @@
             self._position = [x, y, z];
             activeNode.panner.setPosition(x, y, z);
             activeNode.panner.panningModel = self._model || 'HRTF';
+          }
+        }
+        else {
+          var activeNode = (id) ? self._nodeById(id) : self._activeNode();
+          if (activeNode && self._panner) {
+            self._position = [x, y, z];
+            var previousVolume = self._volume;
+            var listenerPosition = Howler.position();
+            var distance = Math.sqrt( (listenerPosition[0] - x)*(listenerPosition[0] - x) + (listenerPosition[1] - y)*(listenerPosition[1] - y) + (listenerPosition[2] - z)*(listenerPosition[2] - z) );
+            var newVolume = previousVolume * Math.max(1 - distance/self._maxDistance, 0);
+            activeNode.volume = newVolume * Howler.volume();
           }
         }
       } else {
