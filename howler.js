@@ -268,6 +268,7 @@
     self._loaded = false;
     self._sprite = o.sprite || {};
     self._src = o.src || '';
+    self._panner = o.panner !== undefined ? o.panner : true;
     self._position = o.position || [0, 0, -0.5];
     self._velocity = o.velocity || [0, 0, 0];
     self._refDistance = o.refDistance || 1;
@@ -879,7 +880,7 @@
       if (x >= 0 || x < 0) {
         if (self._webAudio) {
           var activeNode = (id) ? self._nodeById(id) : self._activeNode();
-          if (activeNode) {
+          if (activeNode && activeNode.panner) {
             self._position = [x, y, z];
             activeNode.panner.setPosition(x, y, z);
             activeNode.panner.panningModel = self._model || 'HRTF';
@@ -917,7 +918,7 @@
       if (x >= 0 || x < 0) {
         if (self._webAudio) {
           var activeNode = (id) ? self._nodeById(id) : self._activeNode();
-          if (activeNode) {
+          if (activeNode && activeNode.panner) {
             self._velocity = [x, y, z];
             activeNode.panner.setVelocity(x, y, z);
           }
@@ -952,7 +953,7 @@
       if (refDistance >= 0 || refDistance < 0) {
         if (self._webAudio) {
           var activeNode = (id) ? self._nodeById(id) : self._activeNode();
-          if (activeNode) {
+          if (activeNode && activeNode.panner) {
             self._refDistance = refDistance;
             activeNode.panner.refDistance = refDistance;
           }
@@ -987,7 +988,7 @@
       if (maxDistance >= 0 || maxDistance < 0) {
         if (self._webAudio) {
           var activeNode = (id) ? self._nodeById(id) : self._activeNode();
-          if (activeNode) {
+          if (activeNode && activeNode.panner) {
             self._maxDistance = maxDistance;
             activeNode.panner.maxDistance = maxDistance;
           }
@@ -1022,7 +1023,7 @@
       if (rolloffFactor >= 0 || rolloffFactor < 0) {
         if (self._webAudio) {
           var activeNode = (id) ? self._nodeById(id) : self._activeNode();
-          if (activeNode) {
+          if (activeNode && activeNode.panner) {
             self._rolloffFactor = rolloffFactor;
             activeNode.panner.rolloffFactor = rolloffFactor;
           }
@@ -1269,15 +1270,17 @@
       node[index].readyState = 4;
       node[index].connect(masterGain);
 
-      // create the panner
-      node[index].panner = ctx.createPanner();
-      node[index].panner.panningModel = self._model || 'equalpower';
-      node[index].panner.setPosition(self._position[0], self._position[1], self._position[2]);
-      node[index].panner.setVelocity(self._velocity[0], self._velocity[1], self._velocity[2]);
-      node[index].panner.refDistance = self._refDistance;
-      node[index].panner.maxDistance = self._maxDistance;
-      node[index].panner.rolloffFactor = self._rolloffFactor;
-      node[index].panner.connect(node[index]);
+      if (this._panner) {
+        // create the panner
+        node[index].panner = ctx.createPanner();
+        node[index].panner.panningModel = self._model || 'equalpower';
+        node[index].panner.setPosition(self._position[0], self._position[1], self._position[2]);
+        node[index].panner.setVelocity(self._velocity[0], self._velocity[1], self._velocity[2]);
+        node[index].panner.refDistance = self._refDistance;
+        node[index].panner.maxDistance = self._maxDistance;
+        node[index].panner.rolloffFactor = self._rolloffFactor;
+        node[index].panner.connect(node[index]);
+      }
 
       return node[index];
     },
@@ -1463,7 +1466,9 @@
       // setup the buffer source for playback
       node.bufferSource = ctx.createBufferSource();
       node.bufferSource.buffer = cache[obj._src];
-      node.bufferSource.connect(node.panner);
+      if (node.panner) {
+        node.bufferSource.connect(node.panner);
+      }
       node.bufferSource.loop = loop[0];
       if (loop[0]) {
         node.bufferSource.loopStart = loop[1];
