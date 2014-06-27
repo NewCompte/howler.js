@@ -1469,6 +1469,9 @@
       if (node.panner) {
         node.bufferSource.connect(node.panner);
       }
+      else {
+        node.bufferSource.connect(node);
+      }
       node.bufferSource.loop = loop[0];
       if (loop[0]) {
         node.bufferSource.loopStart = loop[1];
